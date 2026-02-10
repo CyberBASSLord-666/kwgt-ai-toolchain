@@ -1,5 +1,4 @@
 import JSZip from 'jszip';
-import { createHash } from 'crypto';
 
 interface Env {
   X_API_KEY?: string;
@@ -258,7 +257,7 @@ export default {
       
       // POST /build-kwgt - Build KWGT file
       if (path === '/build-kwgt' && request.method === 'POST') {
-        const body = await request.json();
+        const body = await request.json() as { kbm?: KBMJson; assets?: { fonts?: any[]; bitmaps?: any[] }; filename?: string };
         const { kbm, assets, filename } = body;
         
         if (!kbm) {
