@@ -1,0 +1,42 @@
+{
+  "root_layer": {
+    "internal_type": "LayerModule",
+    "layer_name": "Simple Clock Widget",
+    "layer_width": 1080,
+    "layer_height": 500,
+    "layer_background_color": "#FF1E1E1E"
+  },
+  "globals": [
+    {
+      "internal_type": "GlobalVariable",
+      "gv_name": "accent_color",
+      "gv_value": "#FF4CAF50"
+    }
+  ],
+  "items": [
+    {
+      "internal_type": "TextModule",
+      "layer_name": "Time",
+      "position_anchor": "CENTER",
+      "position_x": 540,
+      "position_y": 250,
+      "text_text": "$df(HH:mm)$",
+      "text_size": 72,
+      "text_color": "$gv(accent_color)$",
+      "text_font": "default",
+      "text_typeface": "BOLD"
+    },
+    {
+      "internal_type": "TextModule",
+      "layer_name": "Date",
+      "position_anchor": "CENTER",
+      "position_x": 540,
+      "position_y": 340,
+      "text_text": "$df(EEEE, MMMM d)$",
+      "text_size": 24,
+      "text_color": "#CCFFFFFF",
+      "text_font": "default",
+      "text_typeface": "NORMAL"
+    }
+  ]
+}
