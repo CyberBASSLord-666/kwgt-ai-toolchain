@@ -1,0 +1,52 @@
+name: Deploy Worker to Cloudflare
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'worker/**'
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare Workers
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: worker/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./worker
+        run: npm ci
+      
+      - name: Type check
+        working-directory: ./worker
+        run: npm run type-check
+      
+      - name: Build
+        working-directory: ./worker
+        run: npm run build
+      
+      - name: Deploy to Cloudflare Workers
+        working-directory: ./worker
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      
+      - name: Deployment summary
+        run: |
+          echo "### ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Worker deployed to Cloudflare Workers." >> $GITHUB_STEP_SUMMARY
+          echo "Check your Cloudflare dashboard for the worker URL." >> $GITHUB_STEP_SUMMARY
