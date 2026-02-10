@@ -1,0 +1,178 @@
+openapi: 3.0.0
+info:
+  title: KWGT AI Toolchain API
+  description: API for validating and building KWGT files from KBM JSON
+  version: 1.0.0
+servers:
+  - url: https://kwgt-ai-worker.YOUR_SUBDOMAIN.workers.dev
+    description: Production Cloudflare Worker
+paths:
+  /:
+    get:
+      summary: Get service information
+      operationId: getServiceInfo
+      responses:
+        '200':
+          description: Service information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                  version:
+                    type: string
+                  endpoints:
+                    type: object
+                  documentation:
+                    type: string
+  /validate:
+    post:
+      summary: Validate and repair KBM JSON
+      operationId: validateKBM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KBMJson'
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - ApiKeyAuth: []
+  /build-kwgt:
+    post:
+      summary: Build KWGT file from KBM JSON
+      operationId: buildKWGT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuildRequest'
+      responses:
+        '200':
+          description: KWGT file (binary ZIP)
+          headers:
+            X-KWGT-SHA256:
+              schema:
+                type: string
+              description: SHA256 hash of the KWGT file
+            X-KWGT-Warnings:
+              schema:
+                type: string
+              description: Validation warnings
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - ApiKeyAuth: []
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    KBMJson:
+      type: object
+      properties:
+        root_layer:
+          type: object
+          properties:
+            internal_type:
+              type: string
+              example: LayerModule
+        globals:
+          type: array
+          items:
+            type: object
+        items:
+          type: array
+          items:
+            type: object
+      required:
+        - root_layer
+    ValidationResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        repaired:
+          $ref: '#/components/schemas/KBMJson'
+        warnings:
+          type: array
+          items:
+            type: string
+        errors:
+          type: array
+          items:
+            type: string
+    BuildRequest:
+      type: object
+      properties:
+        kbm:
+          $ref: '#/components/schemas/KBMJson'
+        assets:
+          type: object
+          properties:
+            fonts:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  data:
+                    type: string
+                    format: byte
+                    description: Base64-encoded font data
+            bitmaps:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  data:
+                    type: string
+                    format: byte
+                    description: Base64-encoded bitmap data
+        filename:
+          type: string
+          example: widget.kwgt
+      required:
+        - kbm
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
