@@ -108,13 +108,25 @@ if (buildMode) {
   console.log(`Note: This script performs validation only.`);
   console.log(`To build the .kwgt file, use the Worker API:`);
   console.log();
+  console.log(`Option 1: Create a wrapper JSON file (wrapper.json):`);
+  console.log(`  {`);
+  console.log(`    "kbm": <paste your KBM JSON here>,`);
+  console.log(`    "filename": "${outputFile}"`);
+  console.log(`  }`);
+  console.log();
+  console.log(`Then run:`);
   console.log(`  curl -X POST https://your-worker.workers.dev/build-kwgt \\`);
   console.log(`    -H "Content-Type: application/json" \\`);
-  console.log(`    -d '{"kbm":'"$(cat ${inputFile})"',"filename":"${outputFile}"}' \\`);
+  console.log(`    -d @wrapper.json \\`);
   console.log(`    --output ${outputFile}`);
   console.log();
-  console.log(`Or create a wrapper JSON file with:`);
-  console.log(`  {"kbm": <your KBM JSON>, "filename": "${outputFile}"}`);
+  console.log(`Option 2: Use jq to wrap the KBM:`);
+  console.log(`  jq -n --slurpfile kbm ${inputFile} \\`);
+  console.log(`    '{"kbm": $kbm[0], "filename": "${outputFile}"}' | \\`);
+  console.log(`  curl -X POST https://your-worker.workers.dev/build-kwgt \\`);
+  console.log(`    -H "Content-Type: application/json" \\`);
+  console.log(`    -d @- \\`);
+  console.log(`    --output ${outputFile}`);
   console.log();
 }
 

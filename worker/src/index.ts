@@ -237,20 +237,31 @@ function checkAuth(request: Request, env: Env): boolean {
 function sanitizeFilename(filename: string | undefined): string {
   if (!filename) return 'widget.kwgt';
   
-  // Remove control characters and quotes
-  let sanitized = filename.replace(/[\x00-\x1F\x7F"]/g, '');
+  // Remove control characters, quotes, single quotes, and backticks
+  let sanitized = filename.replace(/[\x00-\x1F\x7F"'`]/g, '');
   
   // Remove path separators
   sanitized = sanitized.replace(/[\/\\]/g, '_');
   
+  // If empty after sanitization, use default
+  if (sanitized.length === 0) return 'widget.kwgt';
+  
   // Ensure it ends with .kwgt
   if (!sanitized.toLowerCase().endsWith('.kwgt')) {
-    sanitized = sanitized.replace(/\.[^.]*$/, '') + '.kwgt';
+    // Remove existing extension if present
+    if (sanitized.includes('.')) {
+      sanitized = sanitized.substring(0, sanitized.lastIndexOf('.'));
+    }
+    sanitized += '.kwgt';
   }
+  
+  // If somehow we end up with just '.kwgt', use default
+  if (sanitized === '.kwgt') return 'widget.kwgt';
   
   // Limit length
   if (sanitized.length > 255) {
-    sanitized = sanitized.substring(0, 251) + '.kwgt';
+    const nameWithoutExt = sanitized.substring(0, sanitized.lastIndexOf('.'));
+    sanitized = nameWithoutExt.substring(0, 250) + '.kwgt';
   }
   
   return sanitized || 'widget.kwgt';
