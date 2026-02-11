@@ -1,9 +1,15 @@
 import JSZip from 'jszip';
 
+/**
+ * Environment variables interface for Cloudflare Worker
+ */
 interface Env {
   X_API_KEY?: string;
 }
 
+/**
+ * KBM JSON structure representing a KWGT widget
+ */
 interface KBMJson {
   root_layer?: {
     internal_type?: string;
@@ -14,6 +20,9 @@ interface KBMJson {
   [key: string]: any;
 }
 
+/**
+ * Result of KBM validation with optional repairs
+ */
 interface ValidationResult {
   valid: boolean;
   repaired?: KBMJson;
@@ -21,7 +30,21 @@ interface ValidationResult {
   errors?: string[];
 }
 
-// Normalize color from #RRGGBB to #FFRRGGBB or #AARRGGBB to #AARRGGBB
+/**
+ * Configuration constants for security and performance
+ */
+const CONFIG = {
+  MAX_ASSET_SIZE: 5 * 1024 * 1024, // 5MB per asset
+  MAX_TOTAL_ASSETS_SIZE: 20 * 1024 * 1024, // 20MB total
+  MAX_FILENAME_LENGTH: 255,
+  MAX_JSON_SIZE: 10 * 1024 * 1024, // 10MB max JSON payload
+} as const;
+
+/**
+ * Normalize color from #RRGGBB to #FFRRGGBB or ensure #AARRGGBB is uppercase
+ * @param color - Color string in hex format
+ * @returns Normalized color string
+ */
 function normalizeColor(color: string): string {
   if (!color || typeof color !== 'string') return color;
   
@@ -38,7 +61,10 @@ function normalizeColor(color: string): string {
   return color;
 }
 
-// Recursively normalize colors in an object
+/**
+ * Recursively normalize colors in an object
+ * @param obj - Object to process
+ */
 function normalizeColorsInObject(obj: any): void {
   if (!obj || typeof obj !== 'object') return;
   
@@ -51,7 +77,11 @@ function normalizeColorsInObject(obj: any): void {
   }
 }
 
-// Wrap common formulas if needed
+/**
+ * Wrap common formulas with $ delimiters if needed
+ * @param formula - Formula string to wrap
+ * @returns Wrapped formula or original string
+ */
 function wrapFormula(formula: string): string {
   if (!formula || typeof formula !== 'string') return formula;
   
@@ -68,7 +98,10 @@ function wrapFormula(formula: string): string {
   return formula;
 }
 
-// Recursively wrap formulas in text fields
+/**
+ * Recursively wrap formulas in text fields
+ * @param obj - Object to process
+ */
 function wrapFormulasInObject(obj: any): void {
   if (!obj || typeof obj !== 'object') return;
   
@@ -82,21 +115,25 @@ function wrapFormulasInObject(obj: any): void {
   }
 }
 
-// Validate and repair KBM JSON
+/**
+ * Validate and repair KBM JSON structure
+ * @param kbm - Input KBM object to validate
+ * @returns Validation result with repaired KBM and warnings/errors
+ */
 function validateAndRepairKBM(kbm: any): ValidationResult {
   const warnings: string[] = [];
   const errors: string[] = [];
   
   // Check if input is an object
   if (!kbm || typeof kbm !== 'object' || Array.isArray(kbm)) {
-    errors.push('KBM must be a valid JSON object');
+    errors.push('KBM must be a valid JSON object, not an array or primitive');
     return {
       valid: false,
       errors,
     };
   }
   
-  // Make a deep copy
+  // Make a deep copy to avoid mutating input
   const repaired: KBMJson = JSON.parse(JSON.stringify(kbm));
   
   // Ensure root_layer exists and is an object
@@ -139,7 +176,12 @@ function validateAndRepairKBM(kbm: any): ValidationResult {
   };
 }
 
-// Build KWGT file from KBM JSON
+/**
+ * Build KWGT file from KBM JSON with optional assets
+ * @param kbm - KBM JSON structure
+ * @param assets - Optional fonts and bitmaps (base64 encoded)
+ * @returns ZIP blob, SHA256 hash, and warnings
+ */
 async function buildKwgtFile(kbm: KBMJson, assets?: { fonts?: any[]; bitmaps?: any[] }): Promise<{
   blob: Uint8Array;
   sha256: string;
@@ -147,6 +189,7 @@ async function buildKwgtFile(kbm: KBMJson, assets?: { fonts?: any[]; bitmaps?: a
 }> {
   const zip = new JSZip();
   const warnings: string[] = [];
+  let totalAssetsSize = 0;
   
   // Validate and repair KBM
   const validation = validateAndRepairKBM(kbm);
@@ -170,12 +213,27 @@ async function buildKwgtFile(kbm: KBMJson, assets?: { fonts?: any[]; bitmaps?: a
           // Decode base64 data
           const data = atob(font.data);
           const bytes = new Uint8Array(data.length);
+          
+          // Check individual asset size
+          if (bytes.length > CONFIG.MAX_ASSET_SIZE) {
+            warnings.push(`Font ${sanitizedName} exceeds ${CONFIG.MAX_ASSET_SIZE / 1024 / 1024}MB limit - skipped`);
+            continue;
+          }
+          
+          totalAssetsSize += bytes.length;
+          
+          // Check total assets size
+          if (totalAssetsSize > CONFIG.MAX_TOTAL_ASSETS_SIZE) {
+            warnings.push(`Total assets size exceeds ${CONFIG.MAX_TOTAL_ASSETS_SIZE / 1024 / 1024}MB limit - remaining assets skipped`);
+            break;
+          }
+          
           for (let i = 0; i < data.length; i++) {
             bytes[i] = data.charCodeAt(i);
           }
           zip.file(`fonts/${sanitizedName}`, bytes);
         } catch (e) {
-          warnings.push(`Failed to add font ${sanitizedName}: ${e}`);
+          warnings.push(`Failed to add font ${sanitizedName}: ${e instanceof Error ? e.message : String(e)}`);
         }
       }
     }
@@ -195,12 +253,27 @@ async function buildKwgtFile(kbm: KBMJson, assets?: { fonts?: any[]; bitmaps?: a
           // Decode base64 data
           const data = atob(bitmap.data);
           const bytes = new Uint8Array(data.length);
+          
+          // Check individual asset size
+          if (bytes.length > CONFIG.MAX_ASSET_SIZE) {
+            warnings.push(`Bitmap ${sanitizedName} exceeds ${CONFIG.MAX_ASSET_SIZE / 1024 / 1024}MB limit - skipped`);
+            continue;
+          }
+          
+          totalAssetsSize += bytes.length;
+          
+          // Check total assets size
+          if (totalAssetsSize > CONFIG.MAX_TOTAL_ASSETS_SIZE) {
+            warnings.push(`Total assets size exceeds ${CONFIG.MAX_TOTAL_ASSETS_SIZE / 1024 / 1024}MB limit - remaining assets skipped`);
+            break;
+          }
+          
           for (let i = 0; i < data.length; i++) {
             bytes[i] = data.charCodeAt(i);
           }
           zip.file(`bitmaps/${sanitizedName}`, bytes);
         } catch (e) {
-          warnings.push(`Failed to add bitmap ${sanitizedName}: ${e}`);
+          warnings.push(`Failed to add bitmap ${sanitizedName}: ${e instanceof Error ? e.message : String(e)}`);
         }
       }
     }
@@ -214,7 +287,6 @@ async function buildKwgtFile(kbm: KBMJson, assets?: { fonts?: any[]; bitmaps?: a
   });
   
   // Calculate SHA256 hash
-  // Note: crypto.subtle is available in Workers
   const hashBuffer = await crypto.subtle.digest('SHA-256', blob);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
@@ -222,7 +294,12 @@ async function buildKwgtFile(kbm: KBMJson, assets?: { fonts?: any[]; bitmaps?: a
   return { blob, sha256, warnings };
 }
 
-// Check API key if required
+/**
+ * Check if request is authenticated
+ * @param request - Incoming request
+ * @param env - Environment variables
+ * @returns true if authenticated or auth not required
+ */
 function checkAuth(request: Request, env: Env): boolean {
   if (!env.X_API_KEY) {
     // No API key configured, allow all requests
@@ -233,7 +310,12 @@ function checkAuth(request: Request, env: Env): boolean {
   return providedKey === env.X_API_KEY;
 }
 
-// Sanitize filename for use in Content-Disposition header
+/**
+ * Sanitize filename for use in Content-Disposition header
+ * Prevents header injection and ensures valid .kwgt extension
+ * @param filename - User-provided filename
+ * @returns Sanitized filename
+ */
 function sanitizeFilename(filename: string | undefined): string {
   if (!filename) return 'widget.kwgt';
   
@@ -259,15 +341,19 @@ function sanitizeFilename(filename: string | undefined): string {
   if (sanitized === '.kwgt') return 'widget.kwgt';
   
   // Limit length (accounting for .kwgt extension = 5 chars)
-  if (sanitized.length > 255) {
+  if (sanitized.length > CONFIG.MAX_FILENAME_LENGTH) {
     const nameWithoutExt = sanitized.substring(0, sanitized.lastIndexOf('.'));
-    sanitized = nameWithoutExt.substring(0, 250) + '.kwgt';
+    sanitized = nameWithoutExt.substring(0, CONFIG.MAX_FILENAME_LENGTH - 5) + '.kwgt';
   }
   
   return sanitized;
 }
 
-// Sanitize asset name to prevent path traversal
+/**
+ * Sanitize asset name to prevent path traversal
+ * @param name - Asset filename
+ * @returns Sanitized filename or null if invalid
+ */
 function sanitizeAssetName(name: string): string | null {
   if (!name || typeof name !== 'string') return null;
   
@@ -281,7 +367,10 @@ function sanitizeAssetName(name: string): string | null {
   const sanitized = basename.replace(/[\x00-\x1F\x7F]/g, '');
   
   // Must have valid extension
-  if (!/\.(ttf|otf|png|jpg|jpeg|gif|webp)$/i.test(sanitized)) return null;
+  if (!/\.(ttf|otf|woff|woff2|png|jpg|jpeg|gif|webp|svg)$/i.test(sanitized)) return null;
+  
+  // Limit length
+  if (sanitized.length > CONFIG.MAX_FILENAME_LENGTH) return null;
   
   return sanitized;
 }
@@ -303,10 +392,33 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
     
+    // Early payload size check for POST requests
+    if (request.method === 'POST') {
+      const contentLengthHeader = request.headers.get('content-length');
+      if (contentLengthHeader) {
+        const contentLength = parseInt(contentLengthHeader, 10);
+        if (!isNaN(contentLength) && contentLength > CONFIG.MAX_JSON_SIZE) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Request too large',
+              message: `Maximum payload size is ${CONFIG.MAX_JSON_SIZE / 1024 / 1024}MB`
+            }),
+            {
+              status: 413,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          );
+        }
+      }
+    }
+    
     // Check authentication
     if (!checkAuth(request, env)) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - X-API-Key required' }),
+        JSON.stringify({ 
+          error: 'Unauthorized',
+          message: 'X-API-Key header is required' 
+        }),
         {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -326,6 +438,11 @@ export default {
               'POST /validate': 'Validate and repair KBM JSON',
               'POST /build-kwgt': 'Build .kwgt file from KBM JSON',
             },
+            limits: {
+              max_json_size_mb: CONFIG.MAX_JSON_SIZE / 1024 / 1024,
+              max_asset_size_mb: CONFIG.MAX_ASSET_SIZE / 1024 / 1024,
+              max_total_assets_mb: CONFIG.MAX_TOTAL_ASSETS_SIZE / 1024 / 1024,
+            },
             documentation: 'https://github.com/CyberBASSLord-666/kwgt-ai-toolchain',
           }, null, 2),
           {
@@ -342,7 +459,11 @@ export default {
           body = await request.json();
         } catch (e) {
           return new Response(
-            JSON.stringify({ error: 'Invalid JSON in request body' }),
+            JSON.stringify({ 
+              error: 'Invalid JSON',
+              message: 'Request body must be valid JSON',
+              details: e instanceof Error ? e.message : String(e)
+            }),
             {
               status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -353,7 +474,7 @@ export default {
         const validation = validateAndRepairKBM(body);
         
         return new Response(JSON.stringify(validation, null, 2), {
-          status: 200,
+          status: validation.valid ? 200 : 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -365,7 +486,11 @@ export default {
           body = await request.json() as { kbm?: KBMJson; assets?: { fonts?: any[]; bitmaps?: any[] }; filename?: string };
         } catch (e) {
           return new Response(
-            JSON.stringify({ error: 'Invalid JSON in request body' }),
+            JSON.stringify({ 
+              error: 'Invalid JSON',
+              message: 'Request body must be valid JSON',
+              details: e instanceof Error ? e.message : String(e)
+            }),
             {
               status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -377,7 +502,11 @@ export default {
         
         if (!kbm) {
           return new Response(
-            JSON.stringify({ error: 'Missing kbm field in request body' }),
+            JSON.stringify({ 
+              error: 'Missing required field',
+              message: 'Request body must include "kbm" field with KBM JSON structure',
+              example: { kbm: {}, assets: {}, filename: 'widget.kwgt' }
+            }),
             {
               status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
