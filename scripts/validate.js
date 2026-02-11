@@ -9,7 +9,6 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 
 // Simple validation function (matches Worker logic)
 function validateKBM(kbm) {
@@ -111,8 +110,11 @@ if (buildMode) {
   console.log();
   console.log(`  curl -X POST https://your-worker.workers.dev/build-kwgt \\`);
   console.log(`    -H "Content-Type: application/json" \\`);
-  console.log(`    -d @${inputFile} \\`);
+  console.log(`    -d '{"kbm":'"$(cat ${inputFile})"',"filename":"${outputFile}"}' \\`);
   console.log(`    --output ${outputFile}`);
+  console.log();
+  console.log(`Or create a wrapper JSON file with:`);
+  console.log(`  {"kbm": <your KBM JSON>, "filename": "${outputFile}"}`);
   console.log();
 }
 

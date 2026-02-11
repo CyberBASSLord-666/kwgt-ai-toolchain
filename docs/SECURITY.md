@@ -75,7 +75,10 @@ Return 401 Unauthorized
 // Add to Worker
 const MAX_PAYLOAD_SIZE = 10 * 1024 * 1024; // 10MB
 
-if (request.headers.get('content-length') > MAX_PAYLOAD_SIZE) {
+const contentLengthHeader = request.headers.get('content-length');
+const contentLength = contentLengthHeader !== null ? parseInt(contentLengthHeader, 10) : NaN;
+
+if (!Number.isNaN(contentLength) && contentLength > MAX_PAYLOAD_SIZE) {
   return new Response('Payload too large', { status: 413 });
 }
 ```
