@@ -366,8 +366,8 @@ function sanitizeAssetName(name: string): string | null {
   // Remove control characters
   const sanitized = basename.replace(/[\x00-\x1F\x7F]/g, '');
   
-  // Must have valid extension
-  if (!/\.(ttf|otf|woff|woff2|png|jpg|jpeg|gif|webp|svg)$/i.test(sanitized)) return null;
+  // Must have valid extension (SVG excluded due to XSS risks)
+  if (!/\.(ttf|otf|woff|woff2|png|jpg|jpeg|gif|webp)$/i.test(sanitized)) return null;
   
   // Limit length
   if (sanitized.length > CONFIG.MAX_FILENAME_LENGTH) return null;
@@ -474,7 +474,7 @@ export default {
         const validation = validateAndRepairKBM(body);
         
         return new Response(JSON.stringify(validation, null, 2), {
-          status: validation.valid ? 200 : 400,
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
