@@ -255,7 +255,7 @@ npm run type-check   # TypeScript validation
 npm run build        # Compile TypeScript
 
 # Local validation script
-node scripts/validate.js examples/sample.json
+node scripts/validate.js examples/simple-clock.json
 ```
 
 ### Project Scripts

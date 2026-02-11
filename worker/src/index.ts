@@ -27,10 +27,10 @@ function normalizeColor(color: string): string {
   
   // If it's #RRGGBB, add FF for full opacity
   if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
-    return '#FF' + color.substring(1);
+    return '#FF' + color.substring(1).toUpperCase();
   }
   
-  // If already #AARRGGBB, return as-is
+  // If already #AARRGGBB, return uppercase
   if (/^#[0-9A-Fa-f]{8}$/.test(color)) {
     return color.toUpperCase();
   }
@@ -68,18 +68,41 @@ function wrapFormula(formula: string): string {
   return formula;
 }
 
+// Recursively wrap formulas in text fields
+function wrapFormulasInObject(obj: any): void {
+  if (!obj || typeof obj !== 'object') return;
+  
+  for (const key in obj) {
+    // Wrap text_text and similar formula fields
+    if ((key === 'text_text' || key === 'gv_value' || key.includes('formula')) && typeof obj[key] === 'string') {
+      obj[key] = wrapFormula(obj[key]);
+    } else if (typeof obj[key] === 'object') {
+      wrapFormulasInObject(obj[key]);
+    }
+  }
+}
+
 // Validate and repair KBM JSON
 function validateAndRepairKBM(kbm: any): ValidationResult {
   const warnings: string[] = [];
   const errors: string[] = [];
   
+  // Check if input is an object
+  if (!kbm || typeof kbm !== 'object' || Array.isArray(kbm)) {
+    errors.push('KBM must be a valid JSON object');
+    return {
+      valid: false,
+      errors,
+    };
+  }
+  
   // Make a deep copy
   const repaired: KBMJson = JSON.parse(JSON.stringify(kbm));
   
-  // Ensure root_layer exists
-  if (!repaired.root_layer) {
+  // Ensure root_layer exists and is an object
+  if (!repaired.root_layer || typeof repaired.root_layer !== 'object' || Array.isArray(repaired.root_layer)) {
     repaired.root_layer = {};
-    warnings.push('Missing root_layer - created empty object');
+    warnings.push('Missing or invalid root_layer - created empty object');
   }
   
   // Ensure root_layer.internal_type is LayerModule
@@ -104,6 +127,9 @@ function validateAndRepairKBM(kbm: any): ValidationResult {
   
   // Normalize colors throughout the object
   normalizeColorsInObject(repaired);
+  
+  // Wrap formulas throughout the object
+  wrapFormulasInObject(repaired);
   
   return {
     valid: errors.length === 0,
@@ -134,6 +160,12 @@ async function buildKwgtFile(kbm: KBMJson, assets?: { fonts?: any[]; bitmaps?: a
   if (assets?.fonts && Array.isArray(assets.fonts)) {
     for (const font of assets.fonts) {
       if (font.name && font.data) {
+        const sanitizedName = sanitizeAssetName(font.name);
+        if (!sanitizedName) {
+          warnings.push(`Invalid font name: ${font.name} - skipped`);
+          continue;
+        }
+        
         try {
           // Decode base64 data
           const data = atob(font.data);
@@ -141,9 +173,9 @@ async function buildKwgtFile(kbm: KBMJson, assets?: { fonts?: any[]; bitmaps?: a
           for (let i = 0; i < data.length; i++) {
             bytes[i] = data.charCodeAt(i);
           }
-          zip.file(`fonts/${font.name}`, bytes);
+          zip.file(`fonts/${sanitizedName}`, bytes);
         } catch (e) {
-          warnings.push(`Failed to add font ${font.name}: ${e}`);
+          warnings.push(`Failed to add font ${sanitizedName}: ${e}`);
         }
       }
     }
@@ -153,6 +185,12 @@ async function buildKwgtFile(kbm: KBMJson, assets?: { fonts?: any[]; bitmaps?: a
   if (assets?.bitmaps && Array.isArray(assets.bitmaps)) {
     for (const bitmap of assets.bitmaps) {
       if (bitmap.name && bitmap.data) {
+        const sanitizedName = sanitizeAssetName(bitmap.name);
+        if (!sanitizedName) {
+          warnings.push(`Invalid bitmap name: ${bitmap.name} - skipped`);
+          continue;
+        }
+        
         try {
           // Decode base64 data
           const data = atob(bitmap.data);
@@ -160,9 +198,9 @@ async function buildKwgtFile(kbm: KBMJson, assets?: { fonts?: any[]; bitmaps?: a
           for (let i = 0; i < data.length; i++) {
             bytes[i] = data.charCodeAt(i);
           }
-          zip.file(`bitmaps/${bitmap.name}`, bytes);
+          zip.file(`bitmaps/${sanitizedName}`, bytes);
         } catch (e) {
-          warnings.push(`Failed to add bitmap ${bitmap.name}: ${e}`);
+          warnings.push(`Failed to add bitmap ${sanitizedName}: ${e}`);
         }
       }
     }
@@ -193,6 +231,48 @@ function checkAuth(request: Request, env: Env): boolean {
   
   const providedKey = request.headers.get('X-API-Key');
   return providedKey === env.X_API_KEY;
+}
+
+// Sanitize filename for use in Content-Disposition header
+function sanitizeFilename(filename: string | undefined): string {
+  if (!filename) return 'widget.kwgt';
+  
+  // Remove control characters and quotes
+  let sanitized = filename.replace(/[\x00-\x1F\x7F"]/g, '');
+  
+  // Remove path separators
+  sanitized = sanitized.replace(/[\/\\]/g, '_');
+  
+  // Ensure it ends with .kwgt
+  if (!sanitized.toLowerCase().endsWith('.kwgt')) {
+    sanitized = sanitized.replace(/\.[^.]*$/, '') + '.kwgt';
+  }
+  
+  // Limit length
+  if (sanitized.length > 255) {
+    sanitized = sanitized.substring(0, 251) + '.kwgt';
+  }
+  
+  return sanitized || 'widget.kwgt';
+}
+
+// Sanitize asset name to prevent path traversal
+function sanitizeAssetName(name: string): string | null {
+  if (!name || typeof name !== 'string') return null;
+  
+  // Remove any path components
+  const basename = name.split(/[\/\\]/).pop() || '';
+  
+  // Reject if contains .. or is empty
+  if (basename.includes('..') || basename.length === 0) return null;
+  
+  // Remove control characters
+  const sanitized = basename.replace(/[\x00-\x1F\x7F]/g, '');
+  
+  // Must have valid extension
+  if (!/\.(ttf|otf|png|jpg|jpeg|gif|webp)$/i.test(sanitized)) return null;
+  
+  return sanitized;
 }
 
 export default {
@@ -246,7 +326,19 @@ export default {
       
       // POST /validate - Validate and repair KBM
       if (path === '/validate' && request.method === 'POST') {
-        const body = await request.json();
+        let body;
+        try {
+          body = await request.json();
+        } catch (e) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid JSON in request body' }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          );
+        }
+        
         const validation = validateAndRepairKBM(body);
         
         return new Response(JSON.stringify(validation, null, 2), {
@@ -257,7 +349,19 @@ export default {
       
       // POST /build-kwgt - Build KWGT file
       if (path === '/build-kwgt' && request.method === 'POST') {
-        const body = await request.json() as { kbm?: KBMJson; assets?: { fonts?: any[]; bitmaps?: any[] }; filename?: string };
+        let body;
+        try {
+          body = await request.json() as { kbm?: KBMJson; assets?: { fonts?: any[]; bitmaps?: any[] }; filename?: string };
+        } catch (e) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid JSON in request body' }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          );
+        }
+        
         const { kbm, assets, filename } = body;
         
         if (!kbm) {
@@ -271,7 +375,7 @@ export default {
         }
         
         const result = await buildKwgtFile(kbm, assets);
-        const kwgtFilename = filename || 'widget.kwgt';
+        const kwgtFilename = sanitizeFilename(filename);
         
         return new Response(result.blob, {
           status: 200,

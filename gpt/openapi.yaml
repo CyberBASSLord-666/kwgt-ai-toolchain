@@ -44,6 +44,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationResult'
+        '400':
+          description: Bad request (invalid JSON)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
@@ -52,6 +58,7 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
         - ApiKeyAuth: []
+        - {}
   /build-kwgt:
     post:
       summary: Build KWGT file from KBM JSON
@@ -93,6 +100,7 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
         - ApiKeyAuth: []
+        - {}
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -102,6 +110,7 @@ components:
   schemas:
     KBMJson:
       type: object
+      description: KBM JSON structure. All fields are optional and will be auto-created if missing.
       properties:
         root_layer:
           type: object
@@ -117,8 +126,6 @@ components:
           type: array
           items:
             type: object
-      required:
-        - root_layer
     ValidationResult:
       type: object
       properties:
