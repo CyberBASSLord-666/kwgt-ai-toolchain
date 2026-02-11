@@ -73,8 +73,8 @@ function wrapFormulasInObject(obj: any): void {
   if (!obj || typeof obj !== 'object') return;
   
   for (const key in obj) {
-    // Wrap text_text and similar formula fields
-    if ((key === 'text_text' || key === 'gv_value' || key.includes('formula')) && typeof obj[key] === 'string') {
+    // Wrap specific known formula fields
+    if ((key === 'text_text' || key === 'gv_value' || key.endsWith('_formula')) && typeof obj[key] === 'string') {
       obj[key] = wrapFormula(obj[key]);
     } else if (typeof obj[key] === 'object') {
       wrapFormulasInObject(obj[key]);
@@ -258,13 +258,13 @@ function sanitizeFilename(filename: string | undefined): string {
   // If somehow we end up with just '.kwgt', use default
   if (sanitized === '.kwgt') return 'widget.kwgt';
   
-  // Limit length
+  // Limit length (accounting for .kwgt extension = 5 chars)
   if (sanitized.length > 255) {
     const nameWithoutExt = sanitized.substring(0, sanitized.lastIndexOf('.'));
     sanitized = nameWithoutExt.substring(0, 250) + '.kwgt';
   }
   
-  return sanitized || 'widget.kwgt';
+  return sanitized;
 }
 
 // Sanitize asset name to prevent path traversal
