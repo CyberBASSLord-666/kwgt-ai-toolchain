@@ -273,6 +273,39 @@ Global Distribution (200+ cities)
 
 ## Development Workflow
 
+### Engineering Process
+
+This repository uses **ExecPlans** (Execution Plans) for complex, multi-component changes:
+
+- **Purpose**: Structured, living documents that guide implementation
+- **Format**: Defined in `.agent/PLANS.md`
+- **Examples**: See `.agent/examples/` for complete templates
+- **Requirements**: See `AGENTS.md` and `CONTRIBUTING.md` for when to use
+
+**ExecPlan Integration Points**:
+
+When making changes spanning multiple components:
+
+1. **Worker changes** (`worker/src/index.ts`)
+   - Define expected HTTP behavior (status codes, headers)
+   - Include curl commands for verification
+   - Update OpenAPI schema in same milestone
+
+2. **GPT integration** (`gpt/openapi.yaml`)
+   - Keep API contract synchronized with Worker
+   - Include example requests/responses
+   - Validate schema after changes
+
+3. **Notebooks** (`notebooks/*.ipynb`)
+   - Document external dependencies
+   - Note rate limit considerations
+   - Include example outputs
+
+The ExecPlan pattern ensures changes are:
+- **Reviewable**: Diff matches plan milestones
+- **Verifiable**: Acceptance criteria are demonstrable
+- **Traceable**: Decisions and discoveries are documented
+
 ### Local Development
 ```bash
 cd worker

@@ -34,27 +34,29 @@ Thank you for your interest in contributing to the KWGT AI Toolchain! This docum
    git checkout -b feature/your-feature-name
    ```
 
-2. Make your changes following our coding standards
+2. **For complex changes**: Create an ExecPlan (see [When to Write an ExecPlan](#when-to-write-an-execplan) below)
 
-3. Test your changes:
+3. Make your changes following our coding standards
+
+4. Test your changes:
    ```bash
    cd worker
    npm run type-check
    npm run build
    ```
 
-4. Commit your changes:
+5. Commit your changes:
    ```bash
    git add .
    git commit -m "Description of your changes"
    ```
 
-5. Push to your fork:
+6. Push to your fork:
    ```bash
    git push origin feature/your-feature-name
    ```
 
-6. Open a Pull Request on GitHub
+7. Open a Pull Request on GitHub
 
 ## Coding Standards
 
@@ -86,6 +88,41 @@ Examples:
 - ❌ `updates` (too vague)
 - ❌ `Fixed bug` (not specific enough)
 
+## When to Write an ExecPlan
+
+For **complex changes**, write an ExecPlan before starting implementation. See `AGENTS.md` and `.agent/PLANS.md` for details.
+
+### ExecPlan Required For
+
+An ExecPlan is **required** for:
+
+- **New Worker endpoints** (e.g., adding a new route to `worker/src/index.ts`)
+- **API schema changes** (modifications to `gpt/openapi.yaml`)
+- **Multi-component changes** (changes spanning worker/ + gpt/ + notebooks/)
+- **Large PRs** (>500 lines changed OR changes across ≥3 directories)
+- **Security/performance work** (sanitization, validation, rate limiting)
+- **Refactoring** (restructuring without changing behavior)
+- **Test infrastructure** (adding test frameworks or significant test coverage)
+
+### ExecPlan Optional For
+
+Skip ExecPlans for:
+
+- Typo fixes and documentation-only updates
+- Simple bug fixes (single function, clear root cause)
+- Dependency updates (version bumps with no API changes)
+- Example additions (new files in `examples/`)
+
+### How to Create an ExecPlan
+
+1. Copy the template from `.agent/PLANS.md`
+2. Save your plan in `.agent/plans/your-feature-name.md`
+3. Fill in all required sections before coding
+4. Update Progress, Decision Log, and Discoveries as you work
+5. Link to your ExecPlan in the PR description
+
+See `.agent/examples/` for complete example ExecPlans.
+
 ## Pull Request Guidelines
 
 ### Before Submitting
@@ -95,6 +132,7 @@ Examples:
 - [ ] Changes are tested
 - [ ] Documentation is updated
 - [ ] Commit messages are clear
+- [ ] ExecPlan created if required (see criteria above)
 
 ### PR Description
 
@@ -104,6 +142,7 @@ Include:
 - Related issues (if any)
 - Testing performed
 - Breaking changes (if any)
+- Link to ExecPlan (if applicable)
 
 ### Review Process
 

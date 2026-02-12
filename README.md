@@ -266,6 +266,23 @@ Worker (`worker/package.json`):
 - `npm run type-check` - Check types without building
 - `npm run deploy` - Deploy to Cloudflare
 
+## 🤖 Working with AI Coding Agents
+
+This repository supports AI-assisted development through **ExecPlans** (Execution Plans).
+
+- **What**: Structured, living documents that guide complex changes
+- **Why**: Make agent-driven development predictable, reviewable, and reliable
+- **When**: Required for multi-component changes, new endpoints, schema updates
+- **How**: See `AGENTS.md` and `.agent/PLANS.md` for full details
+
+Example scenarios where ExecPlans help:
+- Adding a new Worker endpoint with tests
+- Updating API contracts (Worker + OpenAPI schema)
+- Refactoring with verification steps
+- Security or performance improvements
+
+Learn more: `AGENTS.md` | `.agent/PLANS.md` | `.agent/examples/`
+
 ## 📖 Documentation
 
 - **[Architecture](docs/ARCHITECTURE.md)**: System design and component overview
