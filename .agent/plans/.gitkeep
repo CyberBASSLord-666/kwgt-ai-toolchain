@@ -1,0 +1,3 @@
+# Keep plans directory but ignore completed plans that might be moved elsewhere
+# Active plans should be committed
+
