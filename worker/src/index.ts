@@ -592,7 +592,7 @@ export default {
       return new Response(
         JSON.stringify({
           error: 'Internal server error',
-          message: error instanceof Error ? error.message : String(error),
+          message: 'An unexpected error occurred while processing the request.',
         }),
         {
           status: 500,
