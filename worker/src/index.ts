@@ -172,7 +172,7 @@ function validateAndRepairKBM(kbm: any): ValidationResult {
     valid: errors.length === 0,
     repaired,
     warnings,
-    errors: errors.length > 0 ? errors : undefined,
+    errors: errors.length > 0 ? errors : [],
   };
 }
 
@@ -193,6 +193,16 @@ async function buildKwgtFile(kbm: KBMJson, assets?: { fonts?: any[]; bitmaps?: a
   
   // Validate and repair KBM
   const validation = validateAndRepairKBM(kbm);
+  
+  // If validation failed or no repaired KBM is available, stop and surface an error
+  if (!validation.valid || !validation.repaired) {
+    const errorDetails =
+      Array.isArray(validation.errors) && validation.errors.length
+        ? `: ${validation.errors.join('; ')}`
+        : '';
+    throw new Error(`Invalid KBM input${errorDetails}`);
+  }
+  
   warnings.push(...(validation.warnings || []));
   
   // Add preset.json to zip
@@ -301,9 +311,15 @@ async function buildKwgtFile(kbm: KBMJson, assets?: { fonts?: any[]; bitmaps?: a
  * @returns true if authenticated or auth not required
  */
 function checkAuth(request: Request, env: Env): boolean {
-  if (!env.X_API_KEY) {
+  // Treat only truly unset values as "no auth configured"
+  if (env.X_API_KEY === undefined || env.X_API_KEY === null) {
     // No API key configured, allow all requests
     return true;
+  }
+  
+  // Fail closed if the API key is configured as an empty string
+  if (env.X_API_KEY === '') {
+    return false;
   }
   
   const providedKey = request.headers.get('X-API-Key');
@@ -412,18 +428,20 @@ export default {
       }
     }
     
-    // Check authentication
-    if (!checkAuth(request, env)) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Unauthorized',
-          message: 'X-API-Key header is required' 
-        }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+    // Check authentication for all routes except public GET /
+    if (!(request.method === 'GET' && path === '/')) {
+      if (!checkAuth(request, env)) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Unauthorized',
+            message: 'X-API-Key header is required' 
+          }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
     }
     
     try {
@@ -514,19 +532,49 @@ export default {
           );
         }
         
-        const result = await buildKwgtFile(kbm, assets);
-        const kwgtFilename = sanitizeFilename(filename);
+        // Validate that kbm is a plain object (not array or primitive)
+        if (typeof kbm !== 'object' || Array.isArray(kbm)) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Invalid kbm field',
+              message: 'The "kbm" field must be a JSON object, not an array or primitive value',
+              example: { kbm: { root_layer: { internal_type: 'LayerModule' } } }
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          );
+        }
         
-        return new Response(result.blob, {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/zip',
-            'Content-Disposition': `attachment; filename="${kwgtFilename}"`,
-            'X-KWGT-SHA256': result.sha256,
-            'X-KWGT-Warnings': result.warnings.join('; ') || 'none',
-          },
-        });
+        try {
+          const result = await buildKwgtFile(kbm, assets);
+          const kwgtFilename = sanitizeFilename(filename);
+          
+          return new Response(result.blob, {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/zip',
+              'Content-Disposition': `attachment; filename="${kwgtFilename}"`,
+              'X-KWGT-SHA256': result.sha256,
+              'X-KWGT-Warnings': result.warnings.join('; ') || 'none',
+            },
+          });
+        } catch (error) {
+          // buildKwgtFile can throw on invalid KBM
+          return new Response(
+            JSON.stringify({ 
+              error: 'Build failed',
+              message: error instanceof Error ? error.message : 'Failed to build KWGT file',
+              details: 'Ensure your KBM structure is valid'
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          );
+        }
       }
       
       // 404 for unknown routes
