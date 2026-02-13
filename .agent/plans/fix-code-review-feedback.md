@@ -225,7 +225,14 @@ cd worker && npm run dev
   - [x] Build successful
 
 ### Commits
-- (Next: Commit all changes)
+- 0e516e3: Fix code review security and consistency issues per ExecPlan
+  - Auth: Exempt GET / from auth check
+  - Auth: Fail closed on empty X_API_KEY
+  - Validation: Always return errors array (empty if no errors)
+  - Input: Add kbm type check in /build-kwgt endpoint
+  - Build: Check validation.valid before ZIP building
+  - Build: Catch errors and return 400 instead of 500
+  - Docs: Update TROUBLESHOOTING.md 401 response format
 
 ---
 
@@ -290,13 +297,31 @@ Not only do we need to check validation.valid, but we also need to catch the thr
 ## 8. Retrospective
 
 ### What Went Well
-- (To be filled after completion)
+1. **Structured approach worked**: ExecPlan provided clear roadmap from review comments to implementation
+2. **Minimal changes**: Each fix was surgical and targeted, affecting only necessary code paths
+3. **Documentation was mostly correct**: Only one doc update needed (TROUBLESHOOTING.md)
+4. **Type safety caught issues early**: TypeScript compilation verified changes before runtime
+5. **Security improvements clear**: Fail-closed pattern is much safer than fail-open
 
 ### What Could Be Improved
-- (To be filled after completion)
+1. **Initial OpenAPI review**: Should have checked schema first to avoid assuming changes needed
+2. **Test coverage**: Changes would benefit from automated tests (unit + integration)
+3. **Manual testing**: Should run local dev server to actually test endpoints with curl
+4. **Performance consideration**: Could optimize the recursive object walking for very large KBMs
 
 ### Lessons Learned
-- (To be filled after completion)
+1. **ExecPlans catch scope creep**: Writing milestones upfront prevented unnecessary work
+2. **Explicit is better than implicit**: Checking `=== undefined || === null` vs falsy avoids edge cases
+3. **Double validation**: Input validation at endpoint + function level provides defense in depth
+4. **Documentation drift**: Need regular sync between code and docs; automated checks would help
+5. **Error handling layers**: Catching errors close to source gives better error messages than generic 500s
+
+### Recommendations for Future Work
+1. **Add automated tests** using Vitest + Miniflare (from original ExecPlan integration plan)
+2. **Add CI check** to ensure ExecPlans exist for large changes
+3. **Create validation schemas** using Zod or similar for runtime type checking
+4. **Add request ID generation** for better error tracking
+5. **Make CORS configurable** via environment variable (security hardening)
 
 ---
 
