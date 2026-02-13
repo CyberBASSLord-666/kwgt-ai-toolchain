@@ -14,7 +14,7 @@ Common issues and solutions for the KWGT AI Toolchain.
 
 ### Worker Returns 401 Unauthorized
 
-**Symptoms**: All requests return `{"error": "Unauthorized - X-API-Key required"}`
+**Symptoms**: All requests (except GET /) return `{"error": "Unauthorized", "message": "X-API-Key header is required"}`
 
 **Cause**: X_API_KEY environment variable is set, but request doesn't include matching key
 
