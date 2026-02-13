@@ -317,8 +317,9 @@ function checkAuth(request: Request, env: Env): boolean {
     return true;
   }
   
-  // Fail closed if the API key is configured as an empty string
-  if (env.X_API_KEY === '') {
+  // Fail closed if the API key is configured as an empty string or other falsy value
+  // (Explicit check for empty string to make security intent clear)
+  if (!env.X_API_KEY) {
     return false;
   }
   
@@ -532,12 +533,12 @@ export default {
           );
         }
         
-        // Validate that kbm is a plain object (not array or primitive)
-        if (typeof kbm !== 'object' || Array.isArray(kbm)) {
+        // Validate that kbm is a plain object (not null, array, or primitive)
+        if (typeof kbm !== 'object' || kbm === null || Array.isArray(kbm)) {
           return new Response(
             JSON.stringify({ 
               error: 'Invalid kbm field',
-              message: 'The "kbm" field must be a JSON object, not an array or primitive value',
+              message: 'The "kbm" field must be a JSON object, not an array, null, or primitive value',
               example: { kbm: { root_layer: { internal_type: 'LayerModule' } } }
             }),
             {
