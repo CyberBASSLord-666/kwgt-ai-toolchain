@@ -115,13 +115,22 @@ Skip ExecPlans for:
 
 ### How to Create an ExecPlan
 
-1. Copy the template from `.agent/PLANS.md`
-2. Save your plan in `.agent/plans/your-feature-name.md`
-3. Fill in all required sections before coding
-4. Update Progress, Decision Log, and Discoveries as you work
-5. Link to your ExecPlan in the PR description
+**Quick Start** (Interactive):
+```bash
+node .agent/scripts/new-plan.js
+```
 
-See `.agent/examples/` for complete example ExecPlans.
+**Manual Method**:
+1. Copy the template: `cp .agent/templates/execplan-template.md .agent/plans/your-feature.md`
+2. Fill in all required sections before coding
+3. Update Progress, Decision Log, and Discoveries as you work
+4. Link to your ExecPlan in the PR description
+
+**Resources**:
+- 📖 **5-Minute Guide**: `.agent/QUICKSTART.md`
+- 📋 **Template**: `.agent/templates/execplan-template.md`
+- 📚 **Full Format**: `.agent/PLANS.md`
+- 💡 **Examples**: `.agent/examples/`
 
 ## Pull Request Guidelines
 
