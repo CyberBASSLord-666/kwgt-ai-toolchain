@@ -270,18 +270,45 @@ Worker (`worker/package.json`):
 
 This repository supports AI-assisted development through **ExecPlans** (Execution Plans).
 
+### Quick Start with ExecPlans
+
+**Create a new ExecPlan** (interactive):
+```bash
+node .agent/scripts/new-plan.js
+```
+
+**Or copy the template manually**:
+```bash
+cp .agent/templates/execplan-template.md .agent/plans/my-change.md
+```
+
+### What Are ExecPlans?
+
 - **What**: Structured, living documents that guide complex changes
 - **Why**: Make agent-driven development predictable, reviewable, and reliable
 - **When**: Required for multi-component changes, new endpoints, schema updates
-- **How**: See `AGENTS.md` and `.agent/PLANS.md` for full details
+- **How**: See `.agent/QUICKSTART.md` for 5-minute guide
 
-Example scenarios where ExecPlans help:
-- Adding a new Worker endpoint with tests
-- Updating API contracts (Worker + OpenAPI schema)
-- Refactoring with verification steps
-- Security or performance improvements
+### When to Use ExecPlans
 
-Learn more: `AGENTS.md` | `.agent/PLANS.md` | `.agent/examples/`
+✅ **Use ExecPlan for**:
+- New Worker endpoints or schema changes
+- Multi-component changes (3+ directories)
+- Security/performance work
+- Refactoring or test infrastructure
+
+❌ **Skip ExecPlan for**:
+- Typo fixes or simple doc updates
+- Single-function bug fixes
+- Dependency version bumps
+
+### Resources
+
+- 📖 **Quick Start**: `.agent/QUICKSTART.md` - Get started in 5 minutes
+- 📋 **Template**: `.agent/templates/execplan-template.md` - Copy-paste ready
+- 📚 **Full Format**: `.agent/PLANS.md` - Complete specification
+- 💡 **Examples**: `.agent/examples/` - Real-world examples
+- 🤖 **Agent Guide**: `AGENTS.md` - How agents should work in this repo
 
 ## 📖 Documentation
 
