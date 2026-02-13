@@ -477,11 +477,12 @@ export default {
         try {
           body = await request.json();
         } catch (e) {
+          console.error('Invalid JSON in request body:', e);
           return new Response(
             JSON.stringify({ 
               error: 'Invalid JSON',
               message: 'Request body must be valid JSON',
-              details: e instanceof Error ? e.message : String(e)
+              details: 'The request body contained malformed JSON.'
             }),
             {
               status: 400,
