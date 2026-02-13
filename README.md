@@ -69,6 +69,11 @@ cd worker
 # Install dependencies
 npm install
 
+# Lint + type-check + build
+npm run lint
+npm run type-check
+npm run build
+
 # Run locally
 npm run dev
 
@@ -101,6 +106,11 @@ npm run deploy
 3. Push to main branch or manually trigger the workflow
 
 4. Worker automatically deploys on changes to `worker/` directory
+
+### Quality and Security Automation
+
+- **CI workflow** (`.github/workflows/ci.yml`) runs lint, type-check, and build on pull requests and pushes to `main`
+- **CodeQL workflow** (`.github/workflows/codeql.yml`) runs semantic security analysis on pull requests, pushes to `main`, and weekly schedule
 
 ### 2. Set Up Custom GPT (Optional)
 
