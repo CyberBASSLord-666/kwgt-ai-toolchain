@@ -505,11 +505,11 @@ export default {
         try {
           body = await request.json() as { kbm?: KBMJson; assets?: { fonts?: any[]; bitmaps?: any[] }; filename?: string };
         } catch (e) {
+          console.error('Failed to parse JSON body:', e);
           return new Response(
             JSON.stringify({ 
               error: 'Invalid JSON',
               message: 'Request body must be valid JSON',
-              details: e instanceof Error ? e.message : String(e)
             }),
             {
               status: 400,
