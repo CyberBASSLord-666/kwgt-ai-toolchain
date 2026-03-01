@@ -261,6 +261,7 @@ curl -H "X-API-Key: your-secret-key" \
 # Worker
 cd worker
 npm run dev          # Start local server
+npm run lint         # ESLint checks
 npm run type-check   # TypeScript validation
 npm run build        # Compile TypeScript
 
@@ -272,6 +273,7 @@ node scripts/validate.js examples/simple-clock.json
 
 Worker (`worker/package.json`):
 - `npm run dev` - Start local development server
+- `npm run lint` - Run ESLint checks
 - `npm run build` - Build TypeScript
 - `npm run type-check` - Check types without building
 - `npm run deploy` - Deploy to Cloudflare
@@ -334,6 +336,20 @@ cp .agent/templates/execplan-template.md .agent/plans/my-change.md
 - Use HTTPS for all API requests
 - Validate all inputs
 - Review [SECURITY.md](docs/SECURITY.md) for details
+
+## 📊 PR Documentation: Findings and Actions Taken
+
+| Severity | Component | File (or relative path) | Issue Description | Action Taken | Rationale | Reference/Link |
+|---|---|---|---|---|---|---|
+| High | Dependency Security | worker/package-lock.json | `npm audit` reported transitive vulnerabilities (`minimatch` ReDoS, `ajv` ReDoS). | Ran `npm audit fix` in `worker/`, updating lockfile to non-vulnerable transitive versions. | Removes known high/moderate CVE exposure in development and CI pipelines with minimal functional risk. | https://github.com/advisories/GHSA-23c5-xmqv-rm74, https://github.com/advisories/GHSA-2g4f-4pwh-qvx6 |
+| Medium | CI Security Validation | .github/workflows/ci.yml | CI did not explicitly gate high-severity npm dependency vulnerabilities. | Added `Security audit (high+)` CI step: `npm audit --audit-level=high`. | Prevents regressions by failing PR/push validation when high+ vulnerabilities are introduced. | n/a |
+| Low | Maintainability / Developer Workflow | README.md | Local testing section omitted lint command introduced by quality baseline updates. | Added `npm run lint` to local testing and scripts documentation. | Keeps developer workflow documentation aligned with enforced CI checks. | n/a |
+
+## 📊 PR Documentation: Unresolved Issues
+
+| Severity | Component | File | Issue Description | Reason Unresolved | Suggested Next Steps |
+|---|---|---|---|---|---|
+| Informational | Repository Security Visibility | Repository-wide | GitHub Code Scanning Alerts API returned `403 Resource not accessible by integration` from current tool context. | Expected limitation of the current automation token scope in this environment; repository workflows and code scanning configuration are unaffected. | Verify code scanning alerts in GitHub UI with maintainer permissions and keep CodeQL workflow enabled. |
 
 ### Setting Secrets
 

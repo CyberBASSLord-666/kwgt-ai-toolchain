@@ -35,6 +35,10 @@ jobs:
         working-directory: ./worker
         run: npm ci
 
+      - name: Security audit (high+)
+        working-directory: ./worker
+        run: npm audit --audit-level=high
+
       - name: Lint
         working-directory: ./worker
         run: npm run lint
